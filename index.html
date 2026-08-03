@@ -210,10 +210,28 @@
     return `${emoji} ${status.charAt(0).toUpperCase() + status.slice(1)}`;
   }
 
+  const ACTION_LABELS = {
+    claim: "Claimed! Check your chat — payment instructions are on the way.",
+    paid: "Marked as paid. The operator will confirm shortly.",
+    delivered: "Marked as delivered.",
+    confirm: "Confirmed — releasing funds.",
+    dispute: "Dispute opened. Check your chat for next steps."
+  };
+
   function sendAction(action, code) {
     if (!tg) { alert('Open this inside Telegram to take actions.'); return; }
     tg.sendData(JSON.stringify({ action, code }));
-    tg.close();
+
+    const message = ACTION_LABELS[action] || 'Done.';
+    if (tg.showPopup) {
+      tg.showPopup({ title: '✅ Sent', message, buttons: [{ type: 'ok' }] }, () => tg.close());
+    } else if (tg.showAlert) {
+      tg.showAlert(message, () => tg.close());
+    } else {
+      // Fallback for older Telegram clients without popup support
+      alert(message);
+      setTimeout(() => tg.close(), 300);
+    }
   }
 
   function renderDeal(deal, mode) {
