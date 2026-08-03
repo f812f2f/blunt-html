@@ -132,7 +132,8 @@
     <div class="brand-title"><span class="gold">BLUNT</span> <span class="silver">ESCROW</span></div>
   </div>
   <div class="tabs">
-    <div class="tab active" data-tab="market">Marketplace</div>
+    <div class="tab active" data-tab="market">Market</div>
+    <div class="tab" data-tab="claimed">Claimed</div>
     <div class="tab" data-tab="mine">My Deals</div>
     <div class="tab" data-tab="sell">Sell</div>
   </div>
@@ -144,7 +145,7 @@
   tg?.expand();
 
   // Fill these in with your Supabase project URL and PUBLISHABLE (not secret) key.
-  const SUPABASE_URL = "https://oxbfudydgobdfxnqafvo.supabase.co";
+  const SUPABASE_URL = "  const SUPABASE_URL = "https://oxbfudydgobdfxnqafvo.supabase.co";
   const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_GPRVCXr0AVH7DvF0fqcBlA_28JKUNGI";
   // ⚠️ Since this app writes directly to the database, make sure Row Level Security (RLS)
   // is enabled on the `deals` table in Supabase with policies that only allow the actions
@@ -242,6 +243,41 @@
       return;
     }
     data.forEach(deal => content.appendChild(renderDeal(deal, 'market')));
+  }
+
+  async function loadClaimed() {
+    const content = document.getElementById('content');
+    content.className = 'loading';
+    content.textContent = 'Loading claimed deals…';
+
+    if (!currentUserId) {
+      content.className = 'empty';
+      content.textContent = 'Open this inside Telegram to see your claimed deals.';
+      return;
+    }
+
+    const { data, error } = await supabaseClient
+      .from('deals')
+      .select('*')
+      .eq('buyer_id', currentUserId)
+      .in('status', ['claimed', 'funded', 'delivered'])
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      content.className = 'empty';
+      content.textContent = 'Error loading claimed deals.';
+      console.error(error);
+      return;
+    }
+
+    content.className = '';
+    content.innerHTML = '';
+    if (!data.length) {
+      content.className = 'empty';
+      content.textContent = "You haven't claimed anything yet — check the Marketplace tab.";
+      return;
+    }
+    data.forEach(deal => content.appendChild(renderDeal(deal, 'mine')));
   }
 
   async function loadMine() {
@@ -355,6 +391,7 @@
 
   function refresh() {
     if (activeTab === 'market') loadMarket();
+    else if (activeTab === 'claimed') loadClaimed();
     else if (activeTab === 'mine') loadMine();
     else loadSell();
   }
