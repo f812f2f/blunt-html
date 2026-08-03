@@ -215,7 +215,9 @@
     paid: "Marked as paid. The operator will confirm shortly.",
     delivered: "Marked as delivered.",
     confirm: "Confirmed — releasing funds.",
-    dispute: "Dispute opened. Check your chat for next steps."
+    dispute: "Dispute opened. Check your chat for next steps.",
+    remove: "Listing removed.",
+    cancel: "Claim cancelled — relisted."
   };
 
   function sendAction(action, code) {
@@ -243,8 +245,14 @@
       buttons = `<div class="btn-row"><button class="action-btn primary" onclick='sendAction("claim", ${deal.short_code})'>🤝 Claim This Listing</button></div>`;
     }
     if (mode === 'mine') {
+      if (deal.status === 'listed' && deal.seller_id === currentUserId) {
+        buttons = `<div class="btn-row"><button class="action-btn danger" onclick='sendAction("remove", ${deal.short_code})'>🗑️ Remove Listing</button></div>`;
+      }
       if (deal.status === 'claimed' && deal.buyer_id === currentUserId) {
-        buttons = `<div class="btn-row"><button class="action-btn primary" onclick='sendAction("paid", ${deal.short_code})'>💸 I've Sent Payment</button></div>`;
+        buttons = `<div class="btn-row">
+          <button class="action-btn primary" onclick='sendAction("paid", ${deal.short_code})'>💸 I've Sent Payment</button>
+          <button class="action-btn danger" onclick='sendAction("cancel", ${deal.short_code})'>❌ Cancel</button>
+        </div>`;
       }
       if (deal.status === 'funded' && deal.seller_id === currentUserId) {
         buttons = `<div class="btn-row"><button class="action-btn primary" onclick='sendAction("delivered", ${deal.short_code})'>📬 Mark Delivered</button></div>`;
