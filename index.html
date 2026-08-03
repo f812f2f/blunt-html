@@ -19,102 +19,139 @@
     --border: rgba(212,160,23,0.18);
   }
   * { box-sizing: border-box; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { scroll-behavior: smooth; }
   body {
     margin: 0;
     background: var(--bg);
     color: var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    padding: 12px 14px 24px;
+    padding: 18px 16px 32px;
+    -webkit-font-smoothing: antialiased;
   }
   .brand-header {
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin: 4px 0 16px;
+    gap: 11px;
+    margin: 4px 0 22px;
   }
   .brand-shield {
-    width: 34px; height: 34px;
-    border-radius: 8px;
+    width: 36px; height: 36px;
+    border-radius: 9px;
     background: linear-gradient(135deg, #1a1a1a, #000);
     border: 1.5px solid #d4a017;
     display: flex; align-items: center; justify-content: center;
     font-weight: 900; font-size: 18px;
     color: #d4a017;
+    box-shadow: 0 0 16px rgba(212,160,23,0.25);
   }
-  .brand-title { font-size: 19px; font-weight: 800; letter-spacing: 0.5px; }
+  .brand-title { font-size: 20px; font-weight: 800; letter-spacing: 0.6px; }
   .brand-title .gold { color: #d4a017; }
   .brand-title .silver { color: #c7c7cc; }
-  h1 { font-size: 20px; margin: 4px 0 14px; display:flex; align-items:center; gap:8px; }
-  .tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+  .tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 18px;
+    background: rgba(255,255,255,0.03);
+    padding: 4px;
+    border-radius: 13px;
+  }
   .tab {
     flex: 1;
     text-align: center;
     padding: 10px 0;
     border-radius: 10px;
-    background: var(--card);
-    border: 1px solid var(--border);
-    font-size: 14px;
+    background: transparent;
+    border: none;
+    font-size: 13.5px;
     font-weight: 600;
     cursor: pointer;
     color: var(--hint);
-    transition: all 0.15s ease;
+    transition: background 0.25s ease, color 0.25s ease, transform 0.12s ease;
   }
+  .tab:active { transform: scale(0.96); }
   .tab.active {
     background: linear-gradient(135deg, #f5d67a, #d4a017);
     color: #0e0e14;
-    border-color: transparent;
-  }
+    box-shadow: 0 2px 10px rgba(212,160,23,0.35);
   }
   .card {
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: 14px;
-    padding: 14px;
-    margin-bottom: 10px;
+    padding: 16px;
+    margin-bottom: 12px;
+    transition: border-color 0.2s ease, transform 0.15s ease;
+    animation: cardIn 0.28s ease backwards;
   }
-  .card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
-  .code { font-size: 12px; color: var(--hint); font-weight: 600; }
+  .card:hover { border-color: rgba(212,160,23,0.4); }
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  #content .card:nth-child(1) { animation-delay: 0.02s; }
+  #content .card:nth-child(2) { animation-delay: 0.06s; }
+  #content .card:nth-child(3) { animation-delay: 0.10s; }
+  #content .card:nth-child(4) { animation-delay: 0.14s; }
+  #content .card:nth-child(5) { animation-delay: 0.18s; }
+  .card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+  .code { font-size: 12px; color: var(--hint); font-weight: 600; letter-spacing: 0.3px; }
   .status {
     font-size: 11px;
     font-weight: 700;
-    padding: 3px 8px;
+    padding: 4px 10px;
     border-radius: 20px;
     background: rgba(212,160,23,0.12);
     color: #f5d67a;
     white-space: nowrap;
   }
-  .item { font-size: 16px; font-weight: 700; margin: 4px 0; color: #fff; }
+  .item { font-size: 16.5px; font-weight: 700; margin: 5px 0 3px; color: #fff; letter-spacing: 0.1px; }
   .price { font-size: 15px; color: #f5d67a; font-weight: 700; }
-  .seller { font-size: 13px; color: var(--hint); margin-top: 2px; }
-  .btn-row { display: flex; gap: 8px; margin-top: 10px; }
+  .seller { font-size: 13px; color: var(--hint); margin-top: 4px; }
+  .btn-row { display: flex; gap: 8px; margin-top: 12px; }
   .action-btn {
     flex: 1;
-    padding: 10px 0;
+    padding: 11px 0;
     border-radius: 10px;
     border: none;
     font-weight: 700;
     font-size: 13px;
     cursor: pointer;
+    transition: transform 0.12s ease, filter 0.15s ease;
   }
-  .action-btn.primary { background: linear-gradient(135deg, #f5d67a, #d4a017); color: #0e0e14; }
+  .action-btn:active { transform: scale(0.97); }
+  .action-btn.primary {
+    background: linear-gradient(135deg, #f5d67a, #d4a017);
+    color: #0e0e14;
+    box-shadow: 0 2px 12px rgba(212,160,23,0.25);
+  }
+  .action-btn.primary:hover { filter: brightness(1.08); }
   .action-btn.danger { background: rgba(255, 90, 90, 0.15); color: #ff8a8a; }
-  .empty { text-align: center; color: var(--hint); padding: 40px 0; font-size: 14px; }
-  .loading { text-align: center; color: var(--hint); padding: 40px 0; font-size: 14px; }
-  .field-label { font-size: 12px; color: var(--hint); margin: 12px 0 4px; font-weight: 600; }
+  .action-btn.danger:hover { background: rgba(255, 90, 90, 0.22); }
+  .empty, .loading {
+    text-align: center;
+    color: var(--hint);
+    padding: 60px 20px;
+    font-size: 14px;
+    animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .field-label { font-size: 12px; color: var(--hint); margin: 14px 0 5px; font-weight: 600; letter-spacing: 0.2px; }
   .field-input {
     width: 100%;
-    padding: 12px;
+    padding: 13px;
     border-radius: 10px;
     border: 1px solid var(--border);
     background: rgba(255,255,255,0.04);
     color: var(--text);
     font-size: 15px;
+    transition: border-color 0.2s ease, background 0.2s ease;
   }
-  .field-input:focus { outline: none; border-color: var(--button); }
+  .field-input:focus { outline: none; border-color: #d4a017; background: rgba(255,255,255,0.06); }
   .submit-btn {
     width: 100%;
-    margin-top: 18px;
-    padding: 14px 0;
+    margin-top: 20px;
+    padding: 15px 0;
     border-radius: 12px;
     border: none;
     background: linear-gradient(135deg, #f5d67a, #d4a017);
@@ -122,8 +159,13 @@
     font-weight: 700;
     font-size: 15px;
     cursor: pointer;
+    box-shadow: 0 4px 16px rgba(212,160,23,0.25);
+    transition: transform 0.12s ease, filter 0.15s ease;
   }
-  .hint-text { font-size: 12px; color: var(--hint); margin-top: 6px; }
+  .submit-btn:active { transform: scale(0.98); }
+  .submit-btn:hover { filter: brightness(1.08); }
+  .submit-btn:disabled { opacity: 0.6; cursor: default; }
+  .hint-text { font-size: 12px; color: var(--hint); margin-top: 8px; }
 </style>
 </head>
 <body>
