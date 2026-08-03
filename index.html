@@ -1,495 +1,776 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Blunt Escrow</title>
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<style>
-  :root {
-    --bg: #000000;
-    --text: #f2f2f5;
-    --hint: #9a9a9a;
-    --link: #d4a017;
-    --button: linear-gradient(135deg, #f5d67a, #d4a017);
-    --button-solid: #d4a017;
-    --button-text: #0e0e14;
-    --card: rgba(212,160,23,0.06);
-    --border: rgba(212,160,23,0.18);
-  }
-  * { box-sizing: border-box; }
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html { scroll-behavior: smooth; }
-  body {
-    margin: 0;
-    background: var(--bg);
-    color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    padding: 18px 16px 32px;
-    -webkit-font-smoothing: antialiased;
-  }
-  .brand-header {
-    display: flex;
-    align-items: center;
-    gap: 11px;
-    margin: 4px 0 22px;
-  }
-  .brand-shield {
-    width: 36px; height: 36px;
-    border-radius: 9px;
-    background: linear-gradient(135deg, #1a1a1a, #000);
-    border: 1.5px solid #d4a017;
-    display: flex; align-items: center; justify-content: center;
-    font-weight: 900; font-size: 18px;
-    color: #d4a017;
-    box-shadow: 0 0 16px rgba(212,160,23,0.25);
-  }
-  .brand-title { font-size: 20px; font-weight: 800; letter-spacing: 0.6px; }
-  .brand-title .gold { color: #d4a017; }
-  .brand-title .silver { color: #c7c7cc; }
-  .tabs {
-    display: flex;
-    gap: 6px;
-    margin-bottom: 18px;
-    background: rgba(255,255,255,0.03);
-    padding: 4px;
-    border-radius: 13px;
-  }
-  .tab {
-    flex: 1;
-    text-align: center;
-    padding: 10px 0;
-    border-radius: 10px;
-    background: transparent;
-    border: none;
-    font-size: 13.5px;
-    font-weight: 600;
-    cursor: pointer;
-    color: var(--hint);
-    transition: background 0.25s ease, color 0.25s ease, transform 0.12s ease;
-  }
-  .tab:active { transform: scale(0.96); }
-  .tab.active {
-    background: linear-gradient(135deg, #f5d67a, #d4a017);
-    color: #0e0e14;
-    box-shadow: 0 2px 10px rgba(212,160,23,0.35);
-  }
-  .card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 16px;
-    margin-bottom: 12px;
-    transition: border-color 0.2s ease, transform 0.15s ease;
-    animation: cardIn 0.28s ease backwards;
-  }
-  .card:hover { border-color: rgba(212,160,23,0.4); }
-  @keyframes cardIn {
-    from { opacity: 0; transform: translateY(6px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  #content .card:nth-child(1) { animation-delay: 0.02s; }
-  #content .card:nth-child(2) { animation-delay: 0.06s; }
-  #content .card:nth-child(3) { animation-delay: 0.10s; }
-  #content .card:nth-child(4) { animation-delay: 0.14s; }
-  #content .card:nth-child(5) { animation-delay: 0.18s; }
-  .card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
-  .code { font-size: 12px; color: var(--hint); font-weight: 600; letter-spacing: 0.3px; }
-  .status {
-    font-size: 11px;
-    font-weight: 700;
-    padding: 4px 10px;
-    border-radius: 20px;
-    background: rgba(212,160,23,0.12);
-    color: #f5d67a;
-    white-space: nowrap;
-  }
-  .item { font-size: 16.5px; font-weight: 700; margin: 5px 0 3px; color: #fff; letter-spacing: 0.1px; }
-  .price { font-size: 15px; color: #f5d67a; font-weight: 700; }
-  .seller { font-size: 13px; color: var(--hint); margin-top: 4px; }
-  .btn-row { display: flex; gap: 8px; margin-top: 12px; }
-  .action-btn {
-    flex: 1;
-    padding: 11px 0;
-    border-radius: 10px;
-    border: none;
-    font-weight: 700;
-    font-size: 13px;
-    cursor: pointer;
-    transition: transform 0.12s ease, filter 0.15s ease;
-  }
-  .action-btn:active { transform: scale(0.97); }
-  .action-btn.primary {
-    background: linear-gradient(135deg, #f5d67a, #d4a017);
-    color: #0e0e14;
-    box-shadow: 0 2px 12px rgba(212,160,23,0.25);
-  }
-  .action-btn.primary:hover { filter: brightness(1.08); }
-  .action-btn.danger { background: rgba(255, 90, 90, 0.15); color: #ff8a8a; }
-  .action-btn.danger:hover { background: rgba(255, 90, 90, 0.22); }
-  .empty, .loading {
-    text-align: center;
-    color: var(--hint);
-    padding: 60px 20px;
-    font-size: 14px;
-    animation: fadeIn 0.3s ease;
-  }
-  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-  .field-label { font-size: 12px; color: var(--hint); margin: 14px 0 5px; font-weight: 600; letter-spacing: 0.2px; }
-  .field-input {
-    width: 100%;
-    padding: 13px;
-    border-radius: 10px;
-    border: 1px solid var(--border);
-    background: rgba(255,255,255,0.04);
-    color: var(--text);
-    font-size: 15px;
-    transition: border-color 0.2s ease, background 0.2s ease;
-  }
-  .field-input:focus { outline: none; border-color: #d4a017; background: rgba(255,255,255,0.06); }
-  .submit-btn {
-    width: 100%;
-    margin-top: 20px;
-    padding: 15px 0;
-    border-radius: 12px;
-    border: none;
-    background: linear-gradient(135deg, #f5d67a, #d4a017);
-    color: #0e0e14;
-    font-weight: 700;
-    font-size: 15px;
-    cursor: pointer;
-    box-shadow: 0 4px 16px rgba(212,160,23,0.25);
-    transition: transform 0.12s ease, filter 0.15s ease;
-  }
-  .submit-btn:active { transform: scale(0.98); }
-  .submit-btn:hover { filter: brightness(1.08); }
-  .submit-btn:disabled { opacity: 0.6; cursor: default; }
-  .hint-text { font-size: 12px; color: var(--hint); margin-top: 8px; }
-</style>
-</head>
-<body>
-  <div class="brand-header">
-    <div class="brand-shield">B</div>
-    <div class="brand-title"><span class="gold">BLUNT</span> <span class="silver">ESCROW</span></div>
-  </div>
-  <div class="tabs">
-    <div class="tab active" data-tab="market">Market</div>
-    <div class="tab" data-tab="claimed">Claimed</div>
-    <div class="tab" data-tab="mine">My Deals</div>
-    <div class="tab" data-tab="sell">Sell</div>
-  </div>
-  <div id="content" class="loading">Loading listings…</div>
+import 'dotenv/config';
+import { Telegraf, Markup } from 'telegraf';
+import { createClient } from '@supabase/supabase-js';
+import { fileURLToPath } from 'url';
+import path from 'path';
 
-<script>
-  const tg = window.Telegram?.WebApp;
-  tg?.ready();
-  tg?.expand();
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-  // Fill these in with your Supabase project URL and PUBLISHABLE (not secret) key.
-  const SUPABASE_URL = "https://oxbfudydgobdfxnqafvo.supabase.co";
-  const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_GPRVCXr0AVH7DvF0fqcBlA_28JKUNGI";
-  // ⚠️ Since this app writes directly to the database, make sure Row Level Security (RLS)
-  // is enabled on the `deals` table in Supabase with policies that only allow the actions
-  // this app actually needs (insert as listed, no direct status changes to "released" etc).
-  // Without RLS, anyone with this public key could write directly to your database,
-  // bypassing the bot's rules entirely.
+const bot = new Telegraf(process.env.BOT_TOKEN);
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+const ADMIN_ID = Number(process.env.ADMIN_TELEGRAM_ID);
+const ESCROW_WALLET = process.env.ESCROW_WALLET_ADDRESS; // kept as BTC fallback
+const WALLETS = {
+  BTC: process.env.ESCROW_WALLET_ADDRESS || 'bc1qlrqax4cr5vuu0pn9uw0c3206sua5p389pey50a',
+  SOL: 'E64jkRZZyZpeyvdsh3u1tpZK2Dn8vLPq96dCB8hiniJV',
+  LTC: 'LNKUyMStETZsPWLNDgUnufUKsWGUm7T6Vj',
+  ETH: '0x5CbCfA6aA71Dd45aA2cEd8322EB2Acd77b904c88',
+  XRP: 'rfjiCyPNtRH9rgbQLVsc1jxuCg6MCntGdT',
+  TON: 'UQDKdT_iqJ_gbYgktM0PVdX1YMDzW9hxRphCFdo5vPGQMPDM',
+  USDT: '0x5CbCfA6aA71Dd45aA2cEd8322EB2Acd77b904c88'
+};
+const CRYPTO_LABELS = { BTC: '₿ Bitcoin', SOL: '◎ Solana', LTC: 'Ł Litecoin', ETH: 'Ξ Ethereum', XRP: '✕ XRP', TON: '💎 TON', USDT: '₮ USDT' };
+const MINI_APP_URL = process.env.MINI_APP_URL;
 
-  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+const FUND_WINDOW_MIN = 60;
+const CONFIRM_WINDOW_HOURS = 2;
+const FEE_PERCENT = 4;
+const NEW_SELLER_LISTING_LIMIT = 3;
+const LISTING_EXPIRY_HOURS = 24;
 
-  const currentUserId = tg?.initDataUnsafe?.user?.id || null;
+let BOT_USERNAME = null;
+bot.telegram.getMe().then(me => { BOT_USERNAME = me.username; }).catch(() => {});
 
-  // Temporary diagnostic — remove once the "not detected inside Telegram" issue is confirmed fixed.
-  window.addEventListener('DOMContentLoaded', () => {
-    const debugEl = document.createElement('div');
-    debugEl.style.cssText = 'position:fixed;bottom:4px;left:8px;font-size:10px;color:#555;z-index:9999;';
-    debugEl.textContent = `debug: tg=${!!tg} userId=${currentUserId || 'none'}`;
-    document.body.appendChild(debugEl);
-  });
-  let activeTab = 'market';
+// Critical: Telegram only delivers WebApp.sendData() (the mechanism our action buttons
+// use) when the Mini App was opened via the bot's Menu Button — NOT via an inline
+// keyboard button. Inline buttons can still open the app for browsing, but any taps
+// on Claim/Remove/etc inside it silently go nowhere unless this is set.
+if (MINI_APP_URL) {
+  bot.telegram.setChatMenuButton({
+    menu_button: { type: 'web_app', text: '📊 Marketplace', web_app: { url: MINI_APP_URL } }
+  }).catch((e) => console.error('setChatMenuButton failed:', e.message));
+}
 
-  const STATUS_EMOJI = {
-    listed: '🟢', claimed: '🔵', funded: '🟡', delivered: '🟣',
-    confirmed: '🟡', released: '✅', disputed: '🔴', refunded: '⚪️'
-  };
-  const PM_ICONS = { BTC: '₿', SOL: '◎', LTC: 'Ł', ETH: 'Ξ', XRP: '✕', TON: '💎', USDT: '₮' };
+// ---------- display helpers ----------
 
-  function statusLabel(status) {
-    const emoji = STATUS_EMOJI[status] || '⚪️';
-    return `${emoji} ${status.charAt(0).toUpperCase() + status.slice(1)}`;
+const STATUS_TEXT = {
+  listed: '🟢 Listed — waiting for a buyer',
+  claimed: '🟡 Claimed — waiting for payment',
+  funded: '🔵 Payment verified — awaiting delivery',
+  delivered: '📦 Delivered — awaiting buyer confirmation',
+  released: '✅ Completed',
+  disputed: '⚠️ Disputed',
+  expired: '🔴 Expired',
+  refunded: '⚪️ Refunded / cancelled'
+};
+
+function statusText(status) {
+  return STATUS_TEXT[status] || status;
+}
+
+function displayName(from) {
+  return from.username ? `@${from.username}` : from.first_name;
+}
+
+const md = { parse_mode: 'Markdown' };
+
+function miniAppKeyboard() {
+  if (!MINI_APP_URL) return undefined;
+  return Markup.inlineKeyboard([Markup.button.webApp('📊 Open Marketplace', MINI_APP_URL)]);
+}
+
+function deepLink(code) {
+  return BOT_USERNAME ? `https://t.me/${BOT_USERNAME}?start=${code}` : null;
+}
+
+// ---------- helpers ----------
+
+async function upsertUser(from) {
+  await supabase.from('users').upsert({
+    telegram_id: from.id,
+    username: from.username || from.first_name || 'unknown'
+  }, { onConflict: 'telegram_id' });
+}
+
+async function logEvent(dealId, actorId, eventType, note = null) {
+  await supabase.from('deal_events').insert({ deal_id: dealId, actor_id: actorId, event_type: eventType, note });
+}
+
+async function getDealByCode(shortCode) {
+  const { data, error } = await supabase.from('deals').select('*').eq('short_code', shortCode).single();
+  if (error) return null;
+  return data;
+}
+
+function isAdmin(userId) {
+  return userId === ADMIN_ID;
+}
+
+function notifyGroup(text) {
+  if (!process.env.GROUP_CHAT_ID) return;
+  bot.telegram.sendMessage(process.env.GROUP_CHAT_ID, text, md).catch((e) => console.error('group notify failed:', e.message));
+}
+
+async function getReputation(telegramId) {
+  const { data } = await supabase.from('users').select('completed_deals, disputes_lost, created_at').eq('telegram_id', telegramId).single();
+  return data || { completed_deals: 0, disputes_lost: 0 };
+}
+
+function reputationBadge(rep) {
+  if (rep.completed_deals === 0) return '🆕 New trader';
+  if (rep.disputes_lost > 0) return `⭐ ${rep.completed_deals} completed · ⚠️ ${rep.disputes_lost} dispute(s) lost`;
+  return `⭐ ${rep.completed_deals} completed trade${rep.completed_deals === 1 ? '' : 's'} · ⚠️ 0 disputes`;
+}
+
+function timeRemaining(deadlineIso) {
+  if (!deadlineIso) return null;
+  const ms = new Date(deadlineIso).getTime() - Date.now();
+  if (ms <= 0) return 'expired';
+  const h = Math.floor(ms / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
+// ---------- the deal card: one message, edited as status changes ----------
+
+async function dealCardText(deal) {
+  const rep = await getReputation(deal.seller_id);
+  const lines = [`📦 *Deal #${deal.short_code}*`, ''];
+  lines.push(`*Item:*\n${deal.item_name || deal.item_description}`, '');
+  lines.push(`*Description:*\n${deal.item_description}`, '');
+  lines.push(`*Price:*\n$${deal.price_amount} USD  ${CRYPTO_LABELS[deal.payment_method] || deal.payment_method}`, '');
+  lines.push(`*Seller:*\n${deal.seller_id_username || deal.seller_id}  _(${reputationBadge(rep)})_`, '');
+
+  if (deal.buyer_id) {
+    lines.push(`*Buyer:*\n${deal.buyer_id_username || deal.buyer_id}`, '');
   }
 
-  const ACTION_LABELS = {
-    claim: "Claimed! Check your chat — payment instructions are on the way.",
-    paid: "Marked as paid. The operator will confirm shortly.",
-    delivered: "Marked as delivered.",
-    confirm: "Confirmed — releasing funds.",
-    dispute: "Dispute opened. Check your chat for next steps.",
-    remove: "Listing removed.",
-    cancel: "Claim cancelled — relisted."
-  };
+  lines.push(`*Status:*\n${statusText(deal.status)}`);
 
-  function sendAction(action, code) {
-    if (!tg) { alert('Open this inside Telegram to take actions.'); return; }
-    tg.sendData(JSON.stringify({ action, code }));
-
-    const message = ACTION_LABELS[action] || 'Done.';
-    if (tg.showPopup) {
-      tg.showPopup({ title: '✅ Sent', message, buttons: [{ type: 'ok' }] }, () => tg.close());
-    } else if (tg.showAlert) {
-      tg.showAlert(message, () => tg.close());
-    } else {
-      // Fallback for older Telegram clients without popup support
-      alert(message);
-      setTimeout(() => tg.close(), 300);
-    }
+  if (deal.status === 'listed' && deal.listing_expires_at) {
+    const rem = timeRemaining(deal.listing_expires_at);
+    lines.push('', `_Listing expires in ${rem}_`);
+  }
+  if (deal.status === 'claimed' && deal.fund_deadline) {
+    const rem = timeRemaining(deal.fund_deadline);
+    lines.push('', `_Payment window: ${rem} remaining_`);
+  }
+  if (deal.status === 'delivered' && deal.confirm_deadline) {
+    const rem = timeRemaining(deal.confirm_deadline);
+    lines.push('', `_Auto-confirms in ${rem} if no response_`);
+  }
+  if (deal.status === 'disputed' && deal.dispute_reason) {
+    lines.push('', `⚠️ _Reason: ${deal.dispute_reason}_`);
   }
 
-  function renderDeal(deal, mode) {
-    const div = document.createElement('div');
-    div.className = 'card';
+  return lines.join('\n');
+}
 
-    let buttons = '';
-    if (mode === 'market' && deal.status === 'listed' && deal.seller_id !== currentUserId) {
-      buttons = `<div class="btn-row"><button class="action-btn primary" onclick='sendAction("claim", ${deal.short_code})'>🤝 Claim This Listing</button></div>`;
-    }
-    if (mode === 'mine') {
-      if (deal.status === 'listed' && deal.seller_id === currentUserId) {
-        buttons = `<div class="btn-row"><button class="action-btn danger" onclick='sendAction("remove", ${deal.short_code})'>🗑️ Remove Listing</button></div>`;
-      }
-      if (deal.status === 'claimed' && deal.buyer_id === currentUserId) {
-        buttons = `<div class="btn-row">
-          <button class="action-btn primary" onclick='sendAction("paid", ${deal.short_code})'>💸 I've Sent Payment</button>
-          <button class="action-btn danger" onclick='sendAction("cancel", ${deal.short_code})'>❌ Cancel</button>
-        </div>`;
-      }
-      if (deal.status === 'funded' && deal.seller_id === currentUserId) {
-        buttons = `<div class="btn-row"><button class="action-btn primary" onclick='sendAction("delivered", ${deal.short_code})'>📬 Mark Delivered</button></div>`;
-      }
-      if (deal.status === 'delivered' && deal.buyer_id === currentUserId) {
-        buttons = `<div class="btn-row">
-          <button class="action-btn primary" onclick='sendAction("confirm", ${deal.short_code})'>✅ Confirm Receipt</button>
-          <button class="action-btn danger" onclick='sendAction("dispute", ${deal.short_code})'>⚠️ Dispute</button>
-        </div>`;
-      }
-    }
-
-    div.innerHTML = `
-      <div class="card-top">
-        <span class="code">#${deal.short_code}</span>
-        <span class="status">${statusLabel(deal.status)}</span>
-      </div>
-      <div class="item">${escapeHtml(deal.item_name || deal.item_description)}</div>
-      <div class="price">$${deal.price_amount} USD  ${PM_ICONS[deal.payment_method] || '₿'}</div>
-      ${deal.item_name ? `<div class="seller" style="margin-top:4px">${escapeHtml(deal.item_description)}</div>` : ''}
-      <div class="seller">Seller: ${deal.seller_id === currentUserId ? 'you' : deal.seller_id}</div>
-      ${buttons}
-    `;
-    return div;
+function dealCardKeyboard(deal) {
+  const rows = [];
+  if (deal.status === 'listed') {
+    rows.push([Markup.button.callback('🤝 Claim', `claim:${deal.short_code}`), Markup.button.callback('ℹ️ View Details', `view:${deal.short_code}`)]);
   }
+  // Personalized action buttons (paid/delivered/confirm/dispute) are sent in private DMs,
+  // not on the shared public card, since only one specific person should be able to tap them.
+  return rows.length ? Markup.inlineKeyboard(rows) : undefined;
+}
 
-  function escapeHtml(str) {
-    const d = document.createElement('div');
-    d.textContent = str;
-    return d.innerHTML;
-  }
+async function postOrUpdateDealCard(deal, chatId = null) {
+  const text = await dealCardText(deal);
+  const keyboard = dealCardKeyboard(deal);
+  const opts = { parse_mode: 'Markdown', ...(keyboard || {}) };
 
-  async function loadMarket() {
-    const content = document.getElementById('content');
-    content.className = 'loading';
-    content.textContent = 'Loading listings…';
-
-    const { data, error } = await supabaseClient
-      .from('deals')
-      .select('*')
-      .eq('status', 'listed')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      content.className = 'empty';
-      content.textContent = 'Error loading listings.';
-      console.error(error);
+  if (deal.message_id && deal.chat_id) {
+    try {
+      await bot.telegram.editMessageText(deal.chat_id, deal.message_id, undefined, text, opts);
       return;
+    } catch (e) {
+      // message may be too old to edit or was deleted; fall through to posting fresh if we have a target chat
     }
-
-    content.className = '';
-    content.innerHTML = '';
-    if (!data.length) {
-      content.className = 'empty';
-      content.textContent = 'No active listings right now.';
-      return;
-    }
-    data.forEach(deal => content.appendChild(renderDeal(deal, 'market')));
   }
 
-  async function loadClaimed() {
-    const content = document.getElementById('content');
-    content.className = 'loading';
-    content.textContent = 'Loading claimed deals…';
+  if (chatId) {
+    const sent = await bot.telegram.sendMessage(chatId, text, opts);
+    await supabase.from('deals').update({ message_id: sent.message_id, chat_id: chatId }).eq('id', deal.id);
+  }
+}
 
-    if (!currentUserId) {
-      content.className = 'empty';
-      content.textContent = 'Open this inside Telegram to see your claimed deals.';
-      return;
-    }
+// ---------- shared action handlers ----------
 
-    const { data, error } = await supabaseClient
-      .from('deals')
-      .select('*')
-      .eq('buyer_id', currentUserId)
-      .in('status', ['claimed', 'funded', 'delivered'])
-      .order('created_at', { ascending: false });
+async function handleClaim(userId, userDisplayName, replyFn, code) {
+  const deal = await getDealByCode(code);
+  if (!deal) return replyFn('⚠️ Deal not found.');
+  if (deal.status !== 'listed') return replyFn(`⚠️ This deal isn't available anymore (${statusText(deal.status)}).`);
+  if (deal.seller_id === userId) return replyFn("⚠️ You can't buy your own listing.");
 
-    if (error) {
-      content.className = 'empty';
-      content.textContent = 'Error loading claimed deals.';
-      console.error(error);
-      return;
-    }
+  const fundDeadline = new Date(Date.now() + FUND_WINDOW_MIN * 60000).toISOString();
+  const { data: updated, error } = await supabase.from('deals')
+    .update({ buyer_id: userId, buyer_id_username: userDisplayName, status: 'claimed', fund_deadline: fundDeadline })
+    .eq('id', deal.id).select().single();
 
-    content.className = '';
-    content.innerHTML = '';
-    if (!data.length) {
-      content.className = 'empty';
-      content.textContent = "You haven't claimed anything yet — check the Marketplace tab.";
-      return;
-    }
-    data.forEach(deal => content.appendChild(renderDeal(deal, 'mine')));
+  if (error) { console.error(error); return replyFn('⚠️ Error claiming deal.'); }
+
+  const cryptoLabel = CRYPTO_LABELS[deal.payment_method] || deal.payment_method;
+  const walletAddress = WALLETS[deal.payment_method] || WALLETS.BTC;
+  const paymentInstructions =
+    `${cryptoLabel} Send the equivalent of *$${deal.price_amount} USD* to:\n\`${walletAddress}\`\n\n` +
+    `_Confirm the exact amount with the operator before sending — live rate conversion isn't automated yet._`;
+
+  // Try the DM first — Telegram won't deliver it if this person has never opened
+  // a private chat with the bot directly. If it fails, roll back the claim instead
+  // of leaving them stuck with a claimed deal and no instructions.
+  try {
+    await bot.telegram.sendMessage(userId,
+      `🟡 *Deal #${code} claimed*\n\n${paymentInstructions}\n\n` +
+      `⏱️ You have ${FUND_WINDOW_MIN} minutes.\n\n` +
+      `⚠️ _Funds are held by the operator manually in this version._`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback("💸 I've Sent Payment", `paid:${code}`), Markup.button.callback('❌ Cancel', `cancel:${code}`)]
+      ])
+    );
+  } catch (e) {
+    await supabase.from('deals').update({ buyer_id: null, buyer_id_username: null, status: 'listed', fund_deadline: null }).eq('id', deal.id);
+    const botLink = BOT_USERNAME ? `https://t.me/${BOT_USERNAME}` : 'the bot';
+    return replyFn(
+      `⚠️ *Couldn't send you payment instructions.*\n\n` +
+      `Telegram bots can't message someone who hasn't opened a private chat with them yet. ` +
+      `Tap here first: ${botLink}, send /start, then come back and claim again.`
+    );
   }
 
-  async function loadMine() {
-    const content = document.getElementById('content');
-    content.className = 'loading';
-    content.textContent = 'Loading your deals…';
+  await logEvent(deal.id, userId, 'claimed');
+  await postOrUpdateDealCard(updated);
 
-    if (!currentUserId) {
-      content.className = 'empty';
-      content.textContent = 'Open this inside Telegram to see your deals.';
-      return;
+  await bot.telegram.sendMessage(deal.seller_id, `🟡 Your listing *#${code}* was claimed. Waiting for funds.`, md).catch(() => {});
+  notifyGroup(`🟡 Deal *#${code}* — ${deal.item_name || deal.item_description} — was just claimed.`);
+}
+
+async function handlePaid(userId, replyFn, code) {
+  const deal = await getDealByCode(code);
+  if (!deal) return replyFn('⚠️ Deal not found.');
+  if (deal.buyer_id !== userId) return replyFn('⚠️ Only the buyer on this deal can do this.');
+  if (deal.status !== 'claimed') return replyFn(`⚠️ Unexpected status: ${statusText(deal.status)}`);
+
+  await logEvent(deal.id, userId, 'payment_claimed', 'buyer says funds sent, pending admin verification');
+  replyFn(`⏳ Marked as paid. Waiting for the operator to confirm — you'll be notified.`);
+
+  await bot.telegram.sendMessage(ADMIN_ID,
+    `💸 *Deal #${code}:* buyer claims they sent *${deal.price_amount} ${deal.currency}*.\nCheck the wallet, then run \`/confirmfund ${code}\` or use the admin panel.`,
+    md
+  ).catch(() => {});
+}
+
+async function handleCancel(userId, replyFn, code) {
+  const deal = await getDealByCode(code);
+  if (!deal) return replyFn('⚠️ Deal not found.');
+  if (deal.buyer_id !== userId) return replyFn('⚠️ Only the buyer can cancel this claim.');
+  if (deal.status !== 'claimed') return replyFn(`⚠️ Can't cancel — status is ${statusText(deal.status)}.`);
+
+  const { data: updated } = await supabase.from('deals')
+    .update({ status: 'listed', buyer_id: null, fund_deadline: null })
+    .eq('id', deal.id).select().single();
+
+  await logEvent(deal.id, userId, 'cancelled', 'buyer cancelled before funding');
+  await postOrUpdateDealCard(updated);
+  replyFn(`❌ Claim cancelled. Deal #${code} is listed again.`);
+  bot.telegram.sendMessage(deal.seller_id, `❌ Buyer cancelled their claim on *#${code}*. Relisted.`, md).catch(() => {});
+}
+
+async function handleDelivered(userId, replyFn, code) {
+  const deal = await getDealByCode(code);
+  if (!deal) return replyFn('⚠️ Deal not found.');
+  if (deal.seller_id !== userId) return replyFn('⚠️ Only the seller can do this.');
+  if (deal.status !== 'funded') return replyFn(`⚠️ Unexpected status: ${statusText(deal.status)}`);
+
+  const confirmDeadline = new Date(Date.now() + CONFIRM_WINDOW_HOURS * 3600000).toISOString();
+  const { data: updated } = await supabase.from('deals')
+    .update({ status: 'delivered', delivered_at: new Date().toISOString(), confirm_deadline: confirmDeadline })
+    .eq('id', deal.id).select().single();
+
+  await logEvent(deal.id, userId, 'delivered');
+  await postOrUpdateDealCard(updated);
+  replyFn(`📦 Marked delivered. Waiting for buyer confirmation.`);
+  notifyGroup(`📦 Deal *#${code}* — marked as delivered, awaiting buyer confirmation.`);
+
+  await bot.telegram.sendMessage(deal.buyer_id,
+    `📦 Seller marked deal *#${code}* as delivered. Check the item, then:`,
+    { parse_mode: 'Markdown', ...Markup.inlineKeyboard([
+      [Markup.button.callback('✅ Release Funds', `release:${code}`), Markup.button.callback('⚠️ Open Dispute', `dispute:${code}`)]
+    ]) }
+  ).catch(() => {});
+}
+
+async function handleRelease(userId, replyFn, code) {
+  const deal = await getDealByCode(code);
+  if (!deal) return replyFn('⚠️ Deal not found.');
+  if (deal.buyer_id !== userId) return replyFn('⚠️ Only the buyer can do this.');
+  if (deal.status !== 'delivered') return replyFn(`⚠️ Unexpected status: ${statusText(deal.status)}`);
+
+  await supabase.from('deals').update({ status: 'confirmed', confirmed_at: new Date().toISOString() }).eq('id', deal.id);
+  await logEvent(deal.id, userId, 'confirmed');
+
+  const fee = (deal.price_amount * deal.fee_percent) / 100;
+  const payout = deal.price_amount - fee;
+
+  replyFn(`✅ *Confirmed.* Releasing *${payout.toFixed(8)} ${deal.currency}* to the seller (fee: ${fee.toFixed(8)}).`);
+  bot.telegram.sendMessage(ADMIN_ID,
+    `✅ Deal *#${code}* confirmed by buyer.\nSend *${payout.toFixed(8)} ${deal.currency}* to the seller, then run \`/release ${code}\` or use the admin panel.`,
+    md
+  ).catch(() => {});
+}
+
+async function handleDispute(userId, replyFn, code, reason) {
+  const deal = await getDealByCode(code);
+  if (!deal) return replyFn('⚠️ Deal not found.');
+  if (![deal.buyer_id, deal.seller_id].includes(userId)) return replyFn('⚠️ Only the buyer or seller can dispute this deal.');
+  if (!['funded', 'delivered'].includes(deal.status)) return replyFn(`⚠️ Can't dispute a deal in status: ${statusText(deal.status)}`);
+
+  const { data: updated } = await supabase.from('deals')
+    .update({ status: 'disputed', dispute_reason: reason })
+    .eq('id', deal.id).select().single();
+
+  await logEvent(deal.id, userId, 'disputed', reason);
+  await postOrUpdateDealCard(updated);
+  replyFn(`⚠️ Deal #${code} disputed. An operator will review. Send evidence directly to the operator.`);
+  notifyGroup(`⚠️ Deal *#${code}* — a dispute was opened. Under operator review.`);
+  bot.telegram.sendMessage(ADMIN_ID,
+    `⚠️ *Deal #${code} disputed*\nReason: ${reason}\nSeller: ${deal.seller_id} | Buyer: ${deal.buyer_id}`, md
+  ).catch(() => {});
+}
+
+// ---------- commands ----------
+
+bot.start(async (ctx) => {
+  const payload = ctx.startPayload;
+  if (payload) {
+    const code = parseInt(payload);
+    const deal = await getDealByCode(code);
+    if (deal) {
+      const text = await dealCardText(deal);
+      return ctx.replyWithMarkdown(text, dealCardKeyboard(deal));
     }
+  }
 
-    const { data, error } = await supabaseClient
-      .from('deals')
-      .select('*')
-      .or(`buyer_id.eq.${currentUserId},seller_id.eq.${currentUserId}`)
-      .not('status', 'in', '("released","refunded")')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      content.className = 'empty';
-      content.textContent = 'Error loading your deals.';
-      console.error(error);
-      return;
+  ctx.replyWithPhoto(
+    { source: path.join(__dirname, 'assets', 'banner.png') },
+    {
+      caption:
+        `<b>Welcome to Blunt Escrow</b> <tg-emoji emoji-id="5902016123972358349">🛡️</tg-emoji>\n\n` +
+        `This bot holds funds in escrow for P2P trades so neither side has to trust a stranger blind.\n\n` +
+        `<b>How escrow works:</b>\n` +
+        `1️⃣ Seller creates a listing\n` +
+        `2️⃣ Buyer claims it\n` +
+        `3️⃣ Buyer pays into escrow\n` +
+        `4️⃣ Seller delivers\n` +
+        `5️⃣ Buyer releases funds\n` +
+        `6️⃣ Seller gets paid, minus a ${FEE_PERCENT}% fee\n\n` +
+        `⚠️ <b>Early version</b> — funds are verified manually by the operator. Trade small amounts while it's new.\n\n` +
+        `/help for commands — or send /open to launch the marketplace app.`,
+      parse_mode: 'HTML'
     }
+  );
+});
 
-    content.className = '';
-    content.innerHTML = '';
-    if (!data.length) {
-      content.className = 'empty';
-      content.textContent = 'No active deals yet.';
-      return;
+bot.command(['web', 'open'], (ctx) => {
+  if (!MINI_APP_URL) return ctx.reply('⚠️ The web app isn\'t live yet.');
+  ctx.reply('🛡️ Tap below to open Blunt Escrow:', miniAppKeyboard());
+});
+
+bot.command('help', (ctx) => {
+  ctx.replyWithMarkdown(
+    `*How Escrow Works*\n${'─'.repeat(16)}\n\n` +
+    `1️⃣ Seller creates a listing — \`/sell\`\n` +
+    `2️⃣ Buyer claims it — \`/buy <code>\`\n` +
+    `3️⃣ Buyer pays into escrow\n` +
+    `4️⃣ Seller delivers\n` +
+    `5️⃣ Buyer releases funds\n` +
+    `6️⃣ Seller gets paid\n\n` +
+    `*Commands*\n` +
+    `📦 \`/sell\` — start a guided listing (name, price, payment method, description)\n` +
+    `📋 \`/listings\` — browse everything for sale\n` +
+    `🤝 \`/buy <code>\` — claim a listing (alias: /claim)\n` +
+    `🗑️ \`/remove <code>\` — take down your own unclaimed listing\n` +
+    `🔎 \`/status <code>\` — check a deal\n` +
+    `📖 \`/rules\` — disputes & timeouts explained\n\n` +
+    `_For the app: send /open, then tap the button that appears above the keyboard._`
+  );
+});
+
+// ---------- /sell guided wizard ----------
+// In-memory per-user session state. Fine for a single bot process; if you ever run
+// multiple instances, this would need to move into Supabase or Redis instead.
+const sellSessions = new Map();
+
+bot.command('sell', async (ctx) => {
+  await upsertUser(ctx.from);
+  sellSessions.set(ctx.from.id, { step: 'name' });
+  ctx.replyWithMarkdown(`📦 *New Listing*\n\nWhat's the item called?\n_(e.g. "Steam Gift Card")_`);
+});
+
+bot.command('cancelsell', (ctx) => {
+  sellSessions.delete(ctx.from.id);
+  ctx.reply('❌ Listing cancelled.');
+});
+
+bot.on('text', async (ctx, next) => {
+  const session = sellSessions.get(ctx.from.id);
+  if (!session) return next();
+  if (ctx.message.text.startsWith('/')) return next(); // let other commands through
+
+  if (session.step === 'name') {
+    session.name = ctx.message.text.trim();
+    session.step = 'price';
+    return ctx.replyWithMarkdown(`💵 *Price in USD?*\n_(just the number, e.g. 50)_`);
+  }
+
+  if (session.step === 'price') {
+    const price = parseFloat(ctx.message.text.replace(/[^0-9.]/g, ''));
+    if (isNaN(price) || price <= 0) {
+      return ctx.reply('⚠️ Enter a valid number, e.g. 50');
     }
-    data.forEach(deal => content.appendChild(renderDeal(deal, 'mine')));
+    session.price = price;
+    session.step = 'payment_method';
+    return ctx.replyWithMarkdown(
+      `💳 *How will the buyer pay?*`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback('₿ BTC', 'sell_pm:BTC'), Markup.button.callback('◎ SOL', 'sell_pm:SOL'), Markup.button.callback('Ł LTC', 'sell_pm:LTC')],
+        [Markup.button.callback('Ξ ETH', 'sell_pm:ETH'), Markup.button.callback('✕ XRP', 'sell_pm:XRP'), Markup.button.callback('💎 TON', 'sell_pm:TON')],
+        [Markup.button.callback('₮ USDT', 'sell_pm:USDT'), Markup.button.callback('💳 PayPal', 'sell_pm:paypal')]
+      ])
+    );
   }
 
-  function loadSell() {
-    const content = document.getElementById('content');
-    content.className = '';
-    content.innerHTML = `
-      <div class="card">
-        <div class="field-label">Item name</div>
-        <input class="field-input" id="sell-name" type="text" placeholder="Steam Gift Card" />
-
-        <div class="field-label">Price (USD)</div>
-        <input class="field-input" id="sell-price" type="number" step="0.01" placeholder="50" />
-
-        <div class="field-label">Payment method</div>
-        <div class="btn-row" id="sell-pm-row" style="flex-wrap: wrap;">
-          <button type="button" class="action-btn" data-pm="BTC" onclick="selectPaymentMethod('BTC')" style="flex: 1 1 30%;">₿ BTC</button>
-          <button type="button" class="action-btn" data-pm="SOL" onclick="selectPaymentMethod('SOL')" style="flex: 1 1 30%;">◎ SOL</button>
-          <button type="button" class="action-btn" data-pm="LTC" onclick="selectPaymentMethod('LTC')" style="flex: 1 1 30%;">Ł LTC</button>
-          <button type="button" class="action-btn" data-pm="ETH" onclick="selectPaymentMethod('ETH')" style="flex: 1 1 30%;">Ξ ETH</button>
-          <button type="button" class="action-btn" data-pm="XRP" onclick="selectPaymentMethod('XRP')" style="flex: 1 1 30%;">✕ XRP</button>
-          <button type="button" class="action-btn" data-pm="TON" onclick="selectPaymentMethod('TON')" style="flex: 1 1 30%;">💎 TON</button>
-          <button type="button" class="action-btn" data-pm="USDT" onclick="selectPaymentMethod('USDT')" style="flex: 1 1 30%;">₮ USDT</button>
-          <button type="button" class="action-btn" onclick="alert('PayPal is temporarily unavailable.')" style="flex: 1 1 30%; opacity: 0.5;">💳 PayPal</button>
-        </div>
-        <div class="hint-text">PayPal is temporarily out of service — crypto only for now.</div>
-
-        <div class="field-label">Description</div>
-        <input class="field-input" id="sell-desc" type="text" placeholder="Details the buyer should know" />
-
-        <button class="submit-btn" id="sell-submit">📦 Post Listing</button>
-      </div>
-    `;
-    selectPaymentMethod('BTC');
-    document.getElementById('sell-submit').addEventListener('click', submitListing);
+  if (session.step === 'description') {
+    session.description = ctx.message.text.trim();
+    session.step = 'confirm';
+    const pmLabel = CRYPTO_LABELS[session.payment_method] || session.payment_method;
+    return ctx.replyWithMarkdown(
+      `*Review your listing*\n${'─'.repeat(16)}\n\n` +
+      `📦 *Item:* ${session.name}\n` +
+      `💵 *Price:* $${session.price} USD\n` +
+      `💳 *Payment:* ${pmLabel}\n` +
+      `📝 *Description:* ${session.description}\n\n` +
+      `Everything look right?`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback('✅ Post Listing', 'sell_confirm'), Markup.button.callback('❌ Cancel', 'sell_cancel')]
+      ])
+    );
   }
 
-  let selectedPaymentMethod = 'BTC';
-  function selectPaymentMethod(pm) {
-    selectedPaymentMethod = pm;
-    document.querySelectorAll('#sell-pm-row .action-btn[data-pm]').forEach(btn => {
-      const active = btn.dataset.pm === pm;
-      btn.style.background = active ? 'linear-gradient(135deg, #f5d67a, #d4a017)' : 'rgba(255,255,255,0.06)';
-      btn.style.color = active ? '#0e0e14' : 'var(--text)';
-    });
+  return next();
+});
+
+bot.action('sell_pm:paypal', async (ctx) => {
+  await ctx.answerCbQuery('PayPal is temporarily unavailable', { show_alert: true });
+});
+
+bot.action(/^sell_pm:(BTC|SOL|LTC|ETH|XRP|TON|USDT)$/, async (ctx) => {
+  const session = sellSessions.get(ctx.from.id);
+  if (!session) return ctx.answerCbQuery('Session expired, run /sell again.');
+  session.payment_method = ctx.match[1];
+  session.step = 'description';
+  await ctx.answerCbQuery();
+  await ctx.editMessageText(`💳 Payment method set: ${CRYPTO_LABELS[ctx.match[1]]}`);
+  ctx.replyWithMarkdown(`📝 *Description?*\n_(details the buyer should know)_`);
+});
+
+bot.action('sell_cancel', async (ctx) => {
+  sellSessions.delete(ctx.from.id);
+  await ctx.answerCbQuery();
+  ctx.editMessageText('❌ Listing cancelled.');
+});
+
+bot.action('sell_confirm', async (ctx) => {
+  const session = sellSessions.get(ctx.from.id);
+  if (!session) return ctx.answerCbQuery('Session expired, run /sell again.');
+  await ctx.answerCbQuery();
+
+  const listingExpiresAt = new Date(Date.now() + LISTING_EXPIRY_HOURS * 3600000).toISOString();
+  const { data, error } = await supabase.from('deals').insert({
+    seller_id: ctx.from.id,
+    seller_id_username: displayName(ctx.from),
+    price_amount: session.price,
+    currency: 'USD',
+    payment_method: session.payment_method,
+    item_name: session.name,
+    item_description: session.description,
+    fee_percent: FEE_PERCENT,
+    status: 'listed',
+    listing_expires_at: listingExpiresAt
+  }).select().single();
+
+  sellSessions.delete(ctx.from.id);
+
+  if (error) { console.error(error); return ctx.editMessageText(`⚠️ Error creating listing:\n${error.message}`); }
+
+  await logEvent(data.id, ctx.from.id, 'created');
+
+  const link = deepLink(data.short_code);
+  await ctx.editMessageText(
+    `✅ *Listing Created*\n\n` +
+    `*Deal ID:* #${data.short_code}\n` +
+    `*Item:* ${session.name}\n` +
+    `*Price:* $${session.price} USD\n\n` +
+    (link ? `Share this with your buyer:\n${link}` : `Buyers can claim with \`/buy ${data.short_code}\``),
+    { parse_mode: 'Markdown' }
+  );
+
+  const targetChat = process.env.GROUP_CHAT_ID || ctx.chat.id;
+  await postOrUpdateDealCard(data, targetChat);
+});
+
+bot.command(['claim', 'buy'], async (ctx) => {
+  const code = parseInt(ctx.message.text.split(' ')[1]);
+  await upsertUser(ctx.from);
+  await handleClaim(ctx.from.id, displayName(ctx.from), (t) => ctx.replyWithMarkdown(t), code);
+});
+bot.command('paid', async (ctx) => {
+  const code = parseInt(ctx.message.text.split(' ')[1]);
+  await handlePaid(ctx.from.id, (t) => ctx.replyWithMarkdown(t), code);
+});
+bot.command('delivered', async (ctx) => {
+  const code = parseInt(ctx.message.text.split(' ')[1]);
+  await handleDelivered(ctx.from.id, (t) => ctx.replyWithMarkdown(t), code);
+});
+bot.command('confirm', async (ctx) => {
+  const code = parseInt(ctx.message.text.split(' ')[1]);
+  await handleRelease(ctx.from.id, (t) => ctx.replyWithMarkdown(t), code);
+});
+bot.command('dispute', async (ctx) => {
+  const parts = ctx.message.text.split(' ');
+  const code = parseInt(parts[1]);
+  const reason = parts.slice(2).join(' ') || 'no reason given';
+  await handleDispute(ctx.from.id, (t) => ctx.replyWithMarkdown(t), code, reason);
+});
+
+// ---------- inline button taps ----------
+
+bot.action(/^claim:(\d+)$/, async (ctx) => {
+  await upsertUser(ctx.from);
+  await handleClaim(ctx.from.id, displayName(ctx.from), (t) => ctx.telegram.sendMessage(ctx.from.id, t, md), parseInt(ctx.match[1]));
+  await ctx.answerCbQuery('Claimed! Check your DMs for payment instructions.');
+});
+bot.action(/^paid:(\d+)$/, async (ctx) => {
+  await handlePaid(ctx.from.id, (t) => ctx.editMessageText(t, md), parseInt(ctx.match[1]));
+  await ctx.answerCbQuery();
+});
+bot.action(/^cancel:(\d+)$/, async (ctx) => {
+  await handleCancel(ctx.from.id, (t) => ctx.editMessageText(t, md), parseInt(ctx.match[1]));
+  await ctx.answerCbQuery();
+});
+bot.action(/^delivered:(\d+)$/, async (ctx) => {
+  await handleDelivered(ctx.from.id, (t) => ctx.reply(t), parseInt(ctx.match[1]));
+  await ctx.answerCbQuery();
+});
+bot.action(/^release:(\d+)$/, async (ctx) => {
+  await handleRelease(ctx.from.id, (t) => ctx.editMessageText(t, md), parseInt(ctx.match[1]));
+  await ctx.answerCbQuery();
+});
+bot.action(/^dispute:(\d+)$/, async (ctx) => {
+  await ctx.answerCbQuery();
+  await ctx.reply(`Reply with: /dispute ${ctx.match[1]} <reason>`);
+});
+bot.action(/^view:(\d+)$/, async (ctx) => {
+  const deal = await getDealByCode(parseInt(ctx.match[1]));
+  await ctx.answerCbQuery();
+  if (!deal) return ctx.reply('⚠️ Deal not found.');
+  const rep = await getReputation(deal.seller_id);
+  const sellerAge = rep.created_at ? new Date(rep.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'unknown';
+  ctx.replyWithMarkdown(
+    `*Seller*\n${deal.seller_id_username || deal.seller_id}\n\n` +
+    `${reputationBadge(rep)}\nMember since ${sellerAge}`
+  );
+});
+
+// Mini App button taps (kept for when the Mini App is live)
+bot.on('web_app_data', async (ctx) => {
+  try {
+    const { action, code } = JSON.parse(ctx.webAppData.data.text);
+    const reply = (t) => ctx.reply(t);
+    if (action === 'claim') return handleClaim(ctx.from.id, displayName(ctx.from), reply, code);
+    if (action === 'paid') return handlePaid(ctx.from.id, reply, code);
+    if (action === 'delivered') return handleDelivered(ctx.from.id, reply, code);
+    if (action === 'confirm') return handleRelease(ctx.from.id, reply, code);
+    if (action === 'dispute') return handleDispute(ctx.from.id, reply, code, 'flagged from app');
+    if (action === 'remove') return handleRemove(ctx.from.id, reply, code);
+    if (action === 'cancel') return handleCancel(ctx.from.id, reply, code);
+  } catch (e) { console.error(e); }
+});
+
+// LISTINGS (paginated)
+const LISTINGS_PER_PAGE = 5;
+
+async function renderListingsPage(page) {
+  const from = page * LISTINGS_PER_PAGE;
+  const to = from + LISTINGS_PER_PAGE - 1;
+
+  const { data, count, error } = await supabase
+    .from('deals')
+    .select('*', { count: 'exact' })
+    .eq('status', 'listed')
+    .order('created_at', { ascending: false })
+    .range(from, to);
+
+  if (error) return { text: '⚠️ Error loading listings.', keyboard: undefined };
+  if (!data?.length) return { text: 'No active listings right now. Post one with `/sell`.', keyboard: undefined };
+
+  const lines = await Promise.all(data.map(async d => {
+    const rep = await getReputation(d.seller_id);
+    const pm = CRYPTO_LABELS[d.payment_method]?.split(' ')[0] || '₿';
+    return `🟢 *#${d.short_code}* — ${d.item_name || d.item_description}\n💰 $${d.price_amount} USD ${pm}  ·  👤 ${d.seller_id_username || d.seller_id}\n_${reputationBadge(rep)}_  ·  \`/buy ${d.short_code}\``;
+  }));
+
+  const totalPages = Math.max(1, Math.ceil((count || 0) / LISTINGS_PER_PAGE));
+  const text = `*📋 Active Listings*  (page ${page + 1}/${totalPages})\n${'─'.repeat(20)}\n\n${lines.join('\n\n')}`;
+
+  const navButtons = [];
+  if (page > 0) navButtons.push(Markup.button.callback('⬅️ Prev', `listings:${page - 1}`));
+  if (page < totalPages - 1) navButtons.push(Markup.button.callback('Next ➡️', `listings:${page + 1}`));
+
+  return { text, keyboard: navButtons.length ? Markup.inlineKeyboard([navButtons]) : undefined };
+}
+
+bot.command('listings', async (ctx) => {
+  const { text, keyboard } = await renderListingsPage(0);
+  ctx.replyWithMarkdown(text, keyboard);
+});
+
+bot.action(/^listings:(\d+)$/, async (ctx) => {
+  const page = parseInt(ctx.match[1]);
+  const { text, keyboard } = await renderListingsPage(page);
+  await ctx.editMessageText(text, { parse_mode: 'Markdown', ...(keyboard || {}) });
+  await ctx.answerCbQuery();
+});
+
+// Seller can remove their own active listing (separate from admin /delete)
+async function handleRemove(userId, replyFn, code) {
+  const deal = await getDealByCode(code);
+  if (!deal) return replyFn('⚠️ Deal not found.');
+  if (deal.seller_id !== userId) return replyFn('⚠️ Only the seller can remove their own listing.');
+  if (deal.status !== 'listed') return replyFn(`⚠️ Can only remove listings that haven't been claimed yet (status: ${statusText(deal.status)}).`);
+
+  const { data: updated } = await supabase.from('deals').update({ status: 'refunded' }).eq('id', deal.id).select().single();
+  await logEvent(deal.id, userId, 'seller_removed', 'removed by seller');
+  await postOrUpdateDealCard(updated);
+  replyFn(`🗑️ Listing #${code} removed.`);
+}
+
+bot.command('remove', async (ctx) => {
+  const code = parseInt(ctx.message.text.split(' ')[1]);
+  await handleRemove(ctx.from.id, (t) => ctx.reply(t), code);
+});
+
+bot.command('rules', (ctx) => {
+  ctx.replyWithMarkdown(
+    `*Blunt Escrow — How Trades Work*\n\n` +
+    `1️⃣ Seller posts with \`/sell\`\n2️⃣ Buyer claims with \`/buy <code>\`\n3️⃣ Buyer sends funds to escrow\n` +
+    `4️⃣ Operator confirms funds\n5️⃣ Seller delivers\n6️⃣ Buyer releases funds — minus a ${FEE_PERCENT}% fee\n\n` +
+    `*Disputes:* either side can dispute. The operator reviews evidence and decides — refund or release. Not a formal legal process, so trade amounts you're comfortable with.\n\n` +
+    `*Timeouts:* unfunded claims expire after ${FUND_WINDOW_MIN}m. Delivered items auto-release after ${CONFIRM_WINDOW_HOURS}h with no response. Listings expire after ${LISTING_EXPIRY_HOURS}h if unclaimed.`
+  );
+});
+
+bot.command('status', async (ctx) => {
+  const code = parseInt(ctx.message.text.split(' ')[1]);
+  const deal = await getDealByCode(code);
+  if (!deal) return ctx.reply('⚠️ Deal not found.');
+  ctx.replyWithMarkdown(await dealCardText(deal), dealCardKeyboard(deal));
+});
+
+// ADMIN
+bot.command('confirmfund', async (ctx) => {
+  if (!isAdmin(ctx.from.id)) return;
+  const code = parseInt(ctx.message.text.split(' ')[1]);
+  const deal = await getDealByCode(code);
+  if (!deal) return ctx.reply('⚠️ Deal not found.');
+
+  const { data: updated } = await supabase.from('deals').update({ status: 'funded', funded_at: new Date().toISOString() }).eq('id', deal.id).select().single();
+  await logEvent(deal.id, ctx.from.id, 'funded');
+  await postOrUpdateDealCard(updated);
+
+  bot.telegram.sendMessage(deal.seller_id, `🔵 Funds confirmed for deal *#${code}*.`, { parse_mode: 'Markdown', ...Markup.inlineKeyboard([[Markup.button.callback('📦 Mark Delivered', `delivered:${code}`)]]) }).catch(() => {});
+  bot.telegram.sendMessage(deal.buyer_id, `🔵 Funds confirmed for deal *#${code}*. Waiting for delivery.`, md).catch(() => {});
+  ctx.reply(`✅ Deal #${code} marked funded.`);
+  notifyGroup(`🔵 Deal *#${code}* — payment verified, awaiting delivery.`);
+});
+
+bot.command('release', async (ctx) => {
+  if (!isAdmin(ctx.from.id)) return;
+  const code = parseInt(ctx.message.text.split(' ')[1]);
+  const deal = await getDealByCode(code);
+  if (!deal) return ctx.reply('⚠️ Deal not found.');
+
+  const { data: updated } = await supabase.from('deals').update({ status: 'released', released_at: new Date().toISOString() }).eq('id', deal.id).select().single();
+  await logEvent(deal.id, ctx.from.id, 'released');
+  await postOrUpdateDealCard(updated);
+  await supabase.rpc('increment_completed_deals', { uid: deal.seller_id }).catch(() => {});
+
+  bot.telegram.sendMessage(deal.seller_id, `✅ Deal *#${code}* complete — payout sent.`, md).catch(() => {});
+  bot.telegram.sendMessage(deal.buyer_id, `✅ Deal *#${code}* complete. Thanks for trading! 🤝`, md).catch(() => {});
+  ctx.reply(`✅ Deal #${code} marked released.`);
+  notifyGroup(`✅ Deal *#${code}* — completed. Thanks for trading! 🤝`);
+});
+
+// ADMIN ONLY: fetch custom emoji IDs from a pack, e.g. /emojiset ProtectStatus
+// (the short name is whatever comes after t.me/addemoji/ in the pack's link)
+bot.command('emojiset', async (ctx) => {
+  if (!isAdmin(ctx.from.id)) return;
+  const shortName = ctx.message.text.split(' ')[1];
+  if (!shortName) return ctx.reply('Usage: /emojiset <short_name_from_the_pack_link>');
+
+  try {
+    const set = await ctx.telegram.callApi('getStickerSet', { name: shortName });
+    const lines = set.stickers.slice(0, 30).map(s => `${s.emoji || '❓'} — \`${s.custom_emoji_id}\``);
+    ctx.replyWithMarkdown(`*${set.title}* (${set.stickers.length} emoji)\n\n${lines.join('\n')}`);
+  } catch (e) {
+    ctx.reply(`⚠️ Couldn't fetch that pack: ${e.message}`);
+  }
+});
+
+bot.command('delete', async (ctx) => {
+  if (!isAdmin(ctx.from.id)) return;
+  const code = parseInt(ctx.message.text.split(' ')[1]);
+  const deal = await getDealByCode(code);
+  if (!deal) return ctx.reply('⚠️ Deal not found.');
+  if (['released', 'refunded'].includes(deal.status)) return ctx.reply(`⚠️ Already closed.`);
+
+  const { data: updated } = await supabase.from('deals').update({ status: 'refunded' }).eq('id', deal.id).select().single();
+  await logEvent(deal.id, ctx.from.id, 'admin_deleted', 'removed by operator');
+  await postOrUpdateDealCard(updated);
+  ctx.reply(`🗑️ Deal #${code} removed.`);
+  if (deal.seller_id) bot.telegram.sendMessage(deal.seller_id, `🗑️ Your listing *#${code}* was removed by the operator.`, md).catch(() => {});
+  if (deal.buyer_id) bot.telegram.sendMessage(deal.buyer_id, `🗑️ Deal *#${code}* was removed by the operator.`, md).catch(() => {});
+});
+
+// ---------- auto-expiry background job ----------
+
+async function runExpiryChecks() {
+  const now = new Date().toISOString();
+
+  const { data: staleClaims } = await supabase.from('deals').select('*').eq('status', 'claimed').lt('fund_deadline', now);
+  for (const deal of staleClaims || []) {
+    const { data: updated } = await supabase.from('deals').update({ status: 'listed', buyer_id: null, fund_deadline: null }).eq('id', deal.id).select().single();
+    await logEvent(deal.id, null, 'expired', 'fund window elapsed, relisted');
+    await postOrUpdateDealCard(updated);
+    bot.telegram.sendMessage(deal.buyer_id, `⏱️ Deal *#${deal.short_code}* expired — funds weren't received in time.`, md).catch(() => {});
+    bot.telegram.sendMessage(deal.seller_id, `⏱️ Deal *#${deal.short_code}* expired (buyer didn't fund in time). Relisted.`, md).catch(() => {});
   }
 
-  async function submitListing() {
-    if (!currentUserId) { alert('Open this inside Telegram to post a listing.'); return; }
-    const name = document.getElementById('sell-name').value.trim();
-    const price = parseFloat(document.getElementById('sell-price').value);
-    const desc = document.getElementById('sell-desc').value.trim();
-
-    if (!name) { alert('Enter an item name.'); return; }
-    if (isNaN(price) || price <= 0) { alert('Enter a valid price.'); return; }
-    if (!desc) { alert('Enter a description.'); return; }
-
-    const btn = document.getElementById('sell-submit');
-    btn.disabled = true;
-    btn.textContent = 'Posting…';
-
-    const { error } = await supabaseClient.from('deals').insert({
-      seller_id: currentUserId,
-      price_amount: price,
-      currency: 'USD',
-      payment_method: selectedPaymentMethod,
-      item_name: name,
-      item_description: desc,
-      status: 'listed'
-    });
-
-    if (error) {
-      alert('Error posting listing: ' + error.message);
-      btn.disabled = false;
-      btn.textContent = '📦 Post Listing';
-      return;
-    }
-
-    tg?.HapticFeedback?.notificationOccurred('success');
-    activeTab = 'market';
-    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'market'));
-    refresh();
+  const { data: staleDeliveries } = await supabase.from('deals').select('*').eq('status', 'delivered').lt('confirm_deadline', now);
+  for (const deal of staleDeliveries || []) {
+    const { data: updated } = await supabase.from('deals').update({ status: 'released', released_at: new Date().toISOString() }).eq('id', deal.id).select().single();
+    await logEvent(deal.id, null, 'auto_released', 'confirm window elapsed');
+    await postOrUpdateDealCard(updated);
+    await supabase.rpc('increment_completed_deals', { uid: deal.seller_id }).catch(() => {});
+    bot.telegram.sendMessage(deal.seller_id, `✅ Deal *#${deal.short_code}* auto-released.`, md).catch(() => {});
+    bot.telegram.sendMessage(deal.buyer_id, `⏱️ Deal *#${deal.short_code}* auto-released after ${CONFIRM_WINDOW_HOURS}h with no response.`, md).catch(() => {});
   }
 
-  function refresh() {
-    if (activeTab === 'market') loadMarket();
-    else if (activeTab === 'claimed') loadClaimed();
-    else if (activeTab === 'mine') loadMine();
-    else loadSell();
+  const { data: staleListings } = await supabase.from('deals').select('*').eq('status', 'listed').lt('listing_expires_at', now);
+  for (const deal of staleListings || []) {
+    const { data: updated } = await supabase.from('deals').update({ status: 'expired' }).eq('id', deal.id).select().single();
+    await logEvent(deal.id, null, 'listing_expired', null);
+    await postOrUpdateDealCard(updated);
+    bot.telegram.sendMessage(deal.seller_id, `🔴 Your listing *#${deal.short_code}* expired unclaimed after ${LISTING_EXPIRY_HOURS}h.`, md).catch(() => {});
   }
+}
 
-  document.querySelectorAll('.tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      activeTab = tab.dataset.tab;
-      refresh();
-    });
-  });
+setInterval(() => { runExpiryChecks().catch(console.error); }, 5 * 60 * 1000);
 
-  refresh();
-</script>
-</body>
-</html>
+bot.launch();
+runExpiryChecks().catch(console.error);
+console.log('Escrow bot running.');
+
+process.once('SIGINT', () => bot.stop('SIGINT'));
+process.once('SIGTERM', () => bot.stop('SIGTERM'));
