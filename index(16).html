@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Blunt Escrow</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg: #000000;
+    --text: #f2f2f5;
+    --hint: #9a9a9a;
+    --link: #d4a017;
+    --button: linear-gradient(135deg, #f5d67a, #d4a017);
+    --button-solid: #d4a017;
+    --button-text: #0e0e14;
+    --card: rgba(212,160,23,0.06);
+    --border: rgba(212,160,23,0.18);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding: 12px 14px 24px;
+  }
+  .brand-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 4px 0 16px;
+  }
+  .brand-shield {
+    width: 34px; height: 34px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #1a1a1a, #000);
+    border: 1.5px solid #d4a017;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900; font-size: 18px;
+    color: #d4a017;
+  }
+  .brand-title { font-size: 19px; font-weight: 800; letter-spacing: 0.5px; }
+  .brand-title .gold { color: #d4a017; }
+  .brand-title .silver { color: #c7c7cc; }
+  h1 { font-size: 20px; margin: 4px 0 14px; display:flex; align-items:center; gap:8px; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+  .tab {
+    flex: 1;
+    text-align: center;
+    padding: 10px 0;
+    border-radius: 10px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--hint);
+    transition: all 0.15s ease;
+  }
+  .tab.active {
+    background: linear-gradient(135deg, #f5d67a, #d4a017);
+    color: #0e0e14;
+    border-color: transparent;
+  }
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 10px;
+  }
+  .card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+  .code { font-size: 12px; color: var(--hint); font-weight: 600; }
+  .status {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 20px;
+    background: rgba(212,160,23,0.12);
+    color: #f5d67a;
+    white-space: nowrap;
+  }
+  .item { font-size: 16px; font-weight: 700; margin: 4px 0; color: #fff; }
+  .price { font-size: 15px; color: #f5d67a; font-weight: 700; }
+  .seller { font-size: 13px; color: var(--hint); margin-top: 2px; }
+  .btn-row { display: flex; gap: 8px; margin-top: 10px; }
+  .action-btn {
+    flex: 1;
+    padding: 10px 0;
+    border-radius: 10px;
+    border: none;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .action-btn.primary { background: linear-gradient(135deg, #f5d67a, #d4a017); color: #0e0e14; }
+  .action-btn.danger { background: rgba(255, 90, 90, 0.15); color: #ff8a8a; }
+  .empty { text-align: center; color: var(--hint); padding: 40px 0; font-size: 14px; }
+  .loading { text-align: center; color: var(--hint); padding: 40px 0; font-size: 14px; }
+  .field-label { font-size: 12px; color: var(--hint); margin: 12px 0 4px; font-weight: 600; }
+  .field-input {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.04);
+    color: var(--text);
+    font-size: 15px;
+  }
+  .field-input:focus { outline: none; border-color: var(--button); }
+  .submit-btn {
+    width: 100%;
+    margin-top: 18px;
+    padding: 14px 0;
+    border-radius: 12px;
+    border: none;
+    background: linear-gradient(135deg, #f5d67a, #d4a017);
+    color: #0e0e14;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+  }
+  .hint-text { font-size: 12px; color: var(--hint); margin-top: 6px; }
+</style>
+</head>
+<body>
+  <div class="brand-header">
+    <div class="brand-shield">B</div>
+    <div class="brand-title"><span class="gold">BLUNT</span> <span class="silver">ESCROW</span></div>
+  </div>
+  <div class="tabs">
+    <div class="tab active" data-tab="market">Marketplace</div>
+    <div class="tab" data-tab="mine">My Deals</div>
+    <div class="tab" data-tab="sell">Sell</div>
+  </div>
+  <div id="content" class="loading">Loading listings…</div>
+
+<script>
+  const tg = window.Telegram?.WebApp;
+  tg?.ready();
+  tg?.expand();
+
+  // Fill these in with your Supabase project URL and PUBLISHABLE (not secret) key.
+  const SUPABASE_URL = "https://oxbfudydgobdfxnqafvo.supabase.co";
+  const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_GPRVCXr0AVH7DvF0fqcBlA_28JKUNGI";
+  // ⚠️ Since this app writes directly to the database, make sure Row Level Security (RLS)
+  // is enabled on the `deals` table in Supabase with policies that only allow the actions
+  // this app actually needs (insert as listed, no direct status changes to "released" etc).
+  // Without RLS, anyone with this public key could write directly to your database,
+  // bypassing the bot's rules entirely.
+
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+  const currentUserId = tg?.initDataUnsafe?.user?.id || null;
+  let activeTab = 'market';
+
+  const STATUS_EMOJI = {
+    listed: '🟢', claimed: '🔵', funded: '🟡', delivered: '🟣',
+    confirmed: '🟡', released: '✅', disputed: '🔴', refunded: '⚪️'
+  };
+
+  function statusLabel(status) {
+    const emoji = STATUS_EMOJI[status] || '⚪️';
+    return `${emoji} ${status.charAt(0).toUpperCase() + status.slice(1)}`;
+  }
+
+  function sendAction(action, code) {
+    if (!tg) { alert('Open this inside Telegram to take actions.'); return; }
+    tg.sendData(JSON.stringify({ action, code }));
+    tg.close();
+  }
+
+  function renderDeal(deal, mode) {
+    const div = document.createElement('div');
+    div.className = 'card';
+
+    let buttons = '';
+    if (mode === 'market' && deal.status === 'listed' && deal.seller_id !== currentUserId) {
+      buttons = `<div class="btn-row"><button class="action-btn primary" onclick='sendAction("claim", ${deal.short_code})'>🤝 Claim This Listing</button></div>`;
+    }
+    if (mode === 'mine') {
+      if (deal.status === 'claimed' && deal.buyer_id === currentUserId) {
+        buttons = `<div class="btn-row"><button class="action-btn primary" onclick='sendAction("paid", ${deal.short_code})'>💸 I've Sent Payment</button></div>`;
+      }
+      if (deal.status === 'funded' && deal.seller_id === currentUserId) {
+        buttons = `<div class="btn-row"><button class="action-btn primary" onclick='sendAction("delivered", ${deal.short_code})'>📬 Mark Delivered</button></div>`;
+      }
+      if (deal.status === 'delivered' && deal.buyer_id === currentUserId) {
+        buttons = `<div class="btn-row">
+          <button class="action-btn primary" onclick='sendAction("confirm", ${deal.short_code})'>✅ Confirm Receipt</button>
+          <button class="action-btn danger" onclick='sendAction("dispute", ${deal.short_code})'>⚠️ Dispute</button>
+        </div>`;
+      }
+    }
+
+    div.innerHTML = `
+      <div class="card-top">
+        <span class="code">#${deal.short_code}</span>
+        <span class="status">${statusLabel(deal.status)}</span>
+      </div>
+      <div class="item">${escapeHtml(deal.item_name || deal.item_description)}</div>
+      <div class="price">$${deal.price_amount} USD  ${deal.payment_method === 'bank' ? '🏦' : '₿'}</div>
+      ${deal.item_name ? `<div class="seller" style="margin-top:4px">${escapeHtml(deal.item_description)}</div>` : ''}
+      <div class="seller">Seller: ${deal.seller_id === currentUserId ? 'you' : deal.seller_id}</div>
+      ${buttons}
+    `;
+    return div;
+  }
+
+  function escapeHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  async function loadMarket() {
+    const content = document.getElementById('content');
+    content.className = 'loading';
+    content.textContent = 'Loading listings…';
+
+    const { data, error } = await supabaseClient
+      .from('deals')
+      .select('*')
+      .eq('status', 'listed')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      content.className = 'empty';
+      content.textContent = 'Error loading listings.';
+      console.error(error);
+      return;
+    }
+
+    content.className = '';
+    content.innerHTML = '';
+    if (!data.length) {
+      content.className = 'empty';
+      content.textContent = 'No active listings right now.';
+      return;
+    }
+    data.forEach(deal => content.appendChild(renderDeal(deal, 'market')));
+  }
+
+  async function loadMine() {
+    const content = document.getElementById('content');
+    content.className = 'loading';
+    content.textContent = 'Loading your deals…';
+
+    if (!currentUserId) {
+      content.className = 'empty';
+      content.textContent = 'Open this inside Telegram to see your deals.';
+      return;
+    }
+
+    const { data, error } = await supabaseClient
+      .from('deals')
+      .select('*')
+      .or(`buyer_id.eq.${currentUserId},seller_id.eq.${currentUserId}`)
+      .not('status', 'in', '("released","refunded")')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      content.className = 'empty';
+      content.textContent = 'Error loading your deals.';
+      console.error(error);
+      return;
+    }
+
+    content.className = '';
+    content.innerHTML = '';
+    if (!data.length) {
+      content.className = 'empty';
+      content.textContent = 'No active deals yet.';
+      return;
+    }
+    data.forEach(deal => content.appendChild(renderDeal(deal, 'mine')));
+  }
+
+  function loadSell() {
+    const content = document.getElementById('content');
+    content.className = '';
+    content.innerHTML = `
+      <div class="card">
+        <div class="field-label">Item name</div>
+        <input class="field-input" id="sell-name" type="text" placeholder="Steam Gift Card" />
+
+        <div class="field-label">Price (USD)</div>
+        <input class="field-input" id="sell-price" type="number" step="0.01" placeholder="50" />
+
+        <div class="field-label">Payment method</div>
+        <div class="btn-row" id="sell-pm-row">
+          <button type="button" class="action-btn" data-pm="crypto" onclick="selectPaymentMethod('crypto')">₿ Crypto</button>
+          <button type="button" class="action-btn" data-pm="bank" onclick="selectPaymentMethod('bank')">🏦 Bank Transfer</button>
+        </div>
+
+        <div class="field-label">Description</div>
+        <input class="field-input" id="sell-desc" type="text" placeholder="Details the buyer should know" />
+
+        <button class="submit-btn" id="sell-submit">📦 Post Listing</button>
+      </div>
+    `;
+    selectPaymentMethod('crypto');
+    document.getElementById('sell-submit').addEventListener('click', submitListing);
+  }
+
+  let selectedPaymentMethod = 'crypto';
+  function selectPaymentMethod(pm) {
+    selectedPaymentMethod = pm;
+    document.querySelectorAll('#sell-pm-row .action-btn').forEach(btn => {
+      const active = btn.dataset.pm === pm;
+      btn.style.background = active ? 'linear-gradient(135deg, #f5d67a, #d4a017)' : 'rgba(255,255,255,0.06)';
+      btn.style.color = active ? '#0e0e14' : 'var(--text)';
+    });
+  }
+
+  async function submitListing() {
+    if (!currentUserId) { alert('Open this inside Telegram to post a listing.'); return; }
+    const name = document.getElementById('sell-name').value.trim();
+    const price = parseFloat(document.getElementById('sell-price').value);
+    const desc = document.getElementById('sell-desc').value.trim();
+
+    if (!name) { alert('Enter an item name.'); return; }
+    if (isNaN(price) || price <= 0) { alert('Enter a valid price.'); return; }
+    if (!desc) { alert('Enter a description.'); return; }
+
+    const btn = document.getElementById('sell-submit');
+    btn.disabled = true;
+    btn.textContent = 'Posting…';
+
+    const { error } = await supabaseClient.from('deals').insert({
+      seller_id: currentUserId,
+      price_amount: price,
+      currency: 'USD',
+      payment_method: selectedPaymentMethod,
+      item_name: name,
+      item_description: desc,
+      status: 'listed'
+    });
+
+    if (error) {
+      alert('Error posting listing: ' + error.message);
+      btn.disabled = false;
+      btn.textContent = '📦 Post Listing';
+      return;
+    }
+
+    tg?.HapticFeedback?.notificationOccurred('success');
+    activeTab = 'market';
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'market'));
+    refresh();
+  }
+
+  function refresh() {
+    if (activeTab === 'market') loadMarket();
+    else if (activeTab === 'mine') loadMine();
+    else loadSell();
+  }
+
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      activeTab = tab.dataset.tab;
+      refresh();
+    });
+  });
+
+  refresh();
+</script>
+</body>
+</html>
