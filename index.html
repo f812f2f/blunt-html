@@ -198,12 +198,21 @@
   const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
   const currentUserId = tg?.initDataUnsafe?.user?.id || null;
+
+  // Temporary diagnostic — remove once the "not detected inside Telegram" issue is confirmed fixed.
+  window.addEventListener('DOMContentLoaded', () => {
+    const debugEl = document.createElement('div');
+    debugEl.style.cssText = 'position:fixed;bottom:4px;left:8px;font-size:10px;color:#555;z-index:9999;';
+    debugEl.textContent = `debug: tg=${!!tg} userId=${currentUserId || 'none'}`;
+    document.body.appendChild(debugEl);
+  });
   let activeTab = 'market';
 
   const STATUS_EMOJI = {
     listed: '🟢', claimed: '🔵', funded: '🟡', delivered: '🟣',
     confirmed: '🟡', released: '✅', disputed: '🔴', refunded: '⚪️'
   };
+  const PM_ICONS = { BTC: '₿', SOL: '◎', LTC: 'Ł', ETH: 'Ξ', XRP: '✕', TON: '💎', USDT: '₮' };
 
   function statusLabel(status) {
     const emoji = STATUS_EMOJI[status] || '⚪️';
@@ -271,7 +280,7 @@
         <span class="status">${statusLabel(deal.status)}</span>
       </div>
       <div class="item">${escapeHtml(deal.item_name || deal.item_description)}</div>
-      <div class="price">$${deal.price_amount} USD  ${deal.payment_method === 'bank' ? '🏦' : '₿'}</div>
+      <div class="price">$${deal.price_amount} USD  ${PM_ICONS[deal.payment_method] || '₿'}</div>
       ${deal.item_name ? `<div class="seller" style="margin-top:4px">${escapeHtml(deal.item_description)}</div>` : ''}
       <div class="seller">Seller: ${deal.seller_id === currentUserId ? 'you' : deal.seller_id}</div>
       ${buttons}
@@ -395,10 +404,17 @@
         <input class="field-input" id="sell-price" type="number" step="0.01" placeholder="50" />
 
         <div class="field-label">Payment method</div>
-        <div class="btn-row" id="sell-pm-row">
-          <button type="button" class="action-btn" data-pm="crypto" onclick="selectPaymentMethod('crypto')">₿ Crypto</button>
-          <button type="button" class="action-btn" data-pm="bank" onclick="selectPaymentMethod('bank')">🏦 Bank Transfer</button>
+        <div class="btn-row" id="sell-pm-row" style="flex-wrap: wrap;">
+          <button type="button" class="action-btn" data-pm="BTC" onclick="selectPaymentMethod('BTC')" style="flex: 1 1 30%;">₿ BTC</button>
+          <button type="button" class="action-btn" data-pm="SOL" onclick="selectPaymentMethod('SOL')" style="flex: 1 1 30%;">◎ SOL</button>
+          <button type="button" class="action-btn" data-pm="LTC" onclick="selectPaymentMethod('LTC')" style="flex: 1 1 30%;">Ł LTC</button>
+          <button type="button" class="action-btn" data-pm="ETH" onclick="selectPaymentMethod('ETH')" style="flex: 1 1 30%;">Ξ ETH</button>
+          <button type="button" class="action-btn" data-pm="XRP" onclick="selectPaymentMethod('XRP')" style="flex: 1 1 30%;">✕ XRP</button>
+          <button type="button" class="action-btn" data-pm="TON" onclick="selectPaymentMethod('TON')" style="flex: 1 1 30%;">💎 TON</button>
+          <button type="button" class="action-btn" data-pm="USDT" onclick="selectPaymentMethod('USDT')" style="flex: 1 1 30%;">₮ USDT</button>
+          <button type="button" class="action-btn" onclick="alert('PayPal is temporarily unavailable.')" style="flex: 1 1 30%; opacity: 0.5;">💳 PayPal</button>
         </div>
+        <div class="hint-text">PayPal is temporarily out of service — crypto only for now.</div>
 
         <div class="field-label">Description</div>
         <input class="field-input" id="sell-desc" type="text" placeholder="Details the buyer should know" />
@@ -406,14 +422,14 @@
         <button class="submit-btn" id="sell-submit">📦 Post Listing</button>
       </div>
     `;
-    selectPaymentMethod('crypto');
+    selectPaymentMethod('BTC');
     document.getElementById('sell-submit').addEventListener('click', submitListing);
   }
 
-  let selectedPaymentMethod = 'crypto';
+  let selectedPaymentMethod = 'BTC';
   function selectPaymentMethod(pm) {
     selectedPaymentMethod = pm;
-    document.querySelectorAll('#sell-pm-row .action-btn').forEach(btn => {
+    document.querySelectorAll('#sell-pm-row .action-btn[data-pm]').forEach(btn => {
       const active = btn.dataset.pm === pm;
       btn.style.background = active ? 'linear-gradient(135deg, #f5d67a, #d4a017)' : 'rgba(255,255,255,0.06)';
       btn.style.color = active ? '#0e0e14' : 'var(--text)';
