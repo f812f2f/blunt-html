@@ -166,6 +166,19 @@
   .submit-btn:hover { filter: brightness(1.08); }
   .submit-btn:disabled { opacity: 0.6; cursor: default; }
   .hint-text { font-size: 12px; color: var(--hint); margin-top: 8px; }
+  .skeleton {
+    background: linear-gradient(90deg, rgba(255,255,255,0.03) 0%, rgba(212,160,23,0.08) 50%, rgba(255,255,255,0.03) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+    border-radius: 6px;
+  }
+  @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+  .skeleton-card { padding: 16px; border-radius: 14px; border: 1px solid var(--border); margin-bottom: 12px; }
+  .skeleton-line { height: 12px; margin-bottom: 8px; }
+  .empty-state { text-align: center; padding: 70px 24px; animation: fadeIn 0.3s ease; }
+  .empty-state .icon { font-size: 40px; margin-bottom: 12px; opacity: 0.5; }
+  .empty-state .msg { color: var(--hint); font-size: 14px; line-height: 1.5; }
+  .subtitle { font-size: 12px; color: var(--hint); margin: -16px 0 18px 47px; letter-spacing: 0.3px; }
 </style>
 </head>
 <body>
@@ -173,6 +186,7 @@
     <div class="brand-shield">B</div>
     <div class="brand-title"><span class="gold">BLUNT</span> <span class="silver">ESCROW</span></div>
   </div>
+  <div class="subtitle">P2P Escrow Marketplace</div>
   <div class="tabs">
     <div class="tab active" data-tab="market">Market</div>
     <div class="tab" data-tab="claimed">Claimed</div>
@@ -286,10 +300,26 @@
     return d.innerHTML;
   }
 
+  function showSkeleton(container, count = 3) {
+    container.className = '';
+    container.innerHTML = Array.from({ length: count }).map(() => `
+      <div class="skeleton-card">
+        <div class="skeleton skeleton-line" style="width: 30%;"></div>
+        <div class="skeleton skeleton-line" style="width: 60%; height: 18px;"></div>
+        <div class="skeleton skeleton-line" style="width: 40%;"></div>
+        <div class="skeleton skeleton-line" style="width: 80%;"></div>
+      </div>
+    `).join('');
+  }
+
+  function showEmpty(container, icon, message) {
+    container.className = '';
+    container.innerHTML = `<div class="empty-state"><div class="icon">${icon}</div><div class="msg">${message}</div></div>`;
+  }
+
   async function loadMarket() {
     const content = document.getElementById('content');
-    content.className = 'loading';
-    content.textContent = 'Loading listings…';
+    showSkeleton(content);
 
     const { data, error } = await supabaseClient
       .from('deals')
@@ -298,30 +328,25 @@
       .order('created_at', { ascending: false });
 
     if (error) {
-      content.className = 'empty';
-      content.textContent = 'Error loading listings.';
+      showEmpty(content, '⚠️', 'Error loading listings.');
       console.error(error);
       return;
     }
 
-    content.className = '';
-    content.innerHTML = '';
     if (!data.length) {
-      content.className = 'empty';
-      content.textContent = 'No active listings right now.';
+      showEmpty(content, '🛒', 'No active listings right now.<br>Check back soon, or post one yourself.');
       return;
     }
+    content.innerHTML = '';
     data.forEach(deal => content.appendChild(renderDeal(deal, 'market')));
   }
 
   async function loadClaimed() {
     const content = document.getElementById('content');
-    content.className = 'loading';
-    content.textContent = 'Loading claimed deals…';
+    showSkeleton(content, 2);
 
     if (!currentUserId) {
-      content.className = 'empty';
-      content.textContent = 'Open this inside Telegram to see your claimed deals.';
+      showEmpty(content, '🔒', 'Open this inside Telegram to see your claimed deals.');
       return;
     }
 
@@ -333,30 +358,25 @@
       .order('created_at', { ascending: false });
 
     if (error) {
-      content.className = 'empty';
-      content.textContent = 'Error loading claimed deals.';
+      showEmpty(content, '⚠️', 'Error loading claimed deals.');
       console.error(error);
       return;
     }
 
-    content.className = '';
-    content.innerHTML = '';
     if (!data.length) {
-      content.className = 'empty';
-      content.textContent = "You haven't claimed anything yet — check the Marketplace tab.";
+      showEmpty(content, '📭', "You haven't claimed anything yet.<br>Check the Market tab.");
       return;
     }
+    content.innerHTML = '';
     data.forEach(deal => content.appendChild(renderDeal(deal, 'mine')));
   }
 
   async function loadMine() {
     const content = document.getElementById('content');
-    content.className = 'loading';
-    content.textContent = 'Loading your deals…';
+    showSkeleton(content, 2);
 
     if (!currentUserId) {
-      content.className = 'empty';
-      content.textContent = 'Open this inside Telegram to see your deals.';
+      showEmpty(content, '🔒', 'Open this inside Telegram to see your deals.');
       return;
     }
 
@@ -368,19 +388,16 @@
       .order('created_at', { ascending: false });
 
     if (error) {
-      content.className = 'empty';
-      content.textContent = 'Error loading your deals.';
+      showEmpty(content, '⚠️', 'Error loading your deals.');
       console.error(error);
       return;
     }
 
-    content.className = '';
-    content.innerHTML = '';
     if (!data.length) {
-      content.className = 'empty';
-      content.textContent = 'No active deals yet.';
+      showEmpty(content, '📋', 'No active deals yet.');
       return;
     }
+    content.innerHTML = '';
     data.forEach(deal => content.appendChild(renderDeal(deal, 'mine')));
   }
 
