@@ -220,29 +220,17 @@
     return `${emoji} ${status.charAt(0).toUpperCase() + status.slice(1)}`;
   }
 
-  const ACTION_LABELS = {
-    claim: "Claimed! Check your chat — payment instructions are on the way.",
-    paid: "Marked as paid. The operator will confirm shortly.",
-    delivered: "Marked as delivered.",
-    confirm: "Confirmed — releasing funds.",
-    dispute: "Dispute opened. Check your chat for next steps.",
-    remove: "Listing removed.",
-    cancel: "Claim cancelled — relisted."
-  };
+  const BOT_USERNAME = 'mmbluntbot'; // update if the bot's @username ever changes
 
   function sendAction(action, code) {
-    if (!tg) { alert('Open this inside Telegram to take actions.'); return; }
-    tg.sendData(JSON.stringify({ action, code }));
-
-    const message = ACTION_LABELS[action] || 'Done.';
-    if (tg.showPopup) {
-      tg.showPopup({ title: '✅ Sent', message, buttons: [{ type: 'ok' }] }, () => tg.close());
-    } else if (tg.showAlert) {
-      tg.showAlert(message, () => tg.close());
+    // WebApp.sendData() is unreliable across Telegram clients — this instead sends
+    // the user back into the real bot chat with a /start deep link that performs the
+    // action directly. Same mechanism already confirmed working for viewing deals.
+    const link = `https://t.me/${BOT_USERNAME}?start=${action}_${code}`;
+    if (tg?.openTelegramLink) {
+      tg.openTelegramLink(link);
     } else {
-      // Fallback for older Telegram clients without popup support
-      alert(message);
-      setTimeout(() => tg.close(), 300);
+      window.open(link, '_blank');
     }
   }
 
