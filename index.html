@@ -198,23 +198,6 @@
   const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
   const currentUserId = tg?.initDataUnsafe?.user?.id || null;
-
-  // Temporary diagnostic — full readable block, not a tiny corner note this time.
-  window.addEventListener('DOMContentLoaded', () => {
-    const debugEl = document.createElement('div');
-    debugEl.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#000;color:#0f0;font-size:11px;padding:10px;z-index:99999;font-family:monospace;white-space:pre-wrap;border-bottom:2px solid #0f0;max-height:40vh;overflow:auto;';
-    const info = {
-      tg_exists: !!tg,
-      platform: tg?.platform || 'n/a',
-      version: tg?.version || 'n/a',
-      initData_raw_length: tg?.initData?.length || 0,
-      initData_raw_preview: (tg?.initData || '').slice(0, 80),
-      initDataUnsafe_user: tg?.initDataUnsafe?.user || 'MISSING',
-      currentUserId
-    };
-    debugEl.textContent = 'DEBUG:\n' + JSON.stringify(info, null, 2);
-    document.body.prepend(debugEl);
-  });
   let activeTab = 'market';
 
   const STATUS_EMOJI = {
