@@ -29,25 +29,17 @@
     padding: 18px 16px 32px;
     -webkit-font-smoothing: antialiased;
   }
-  .brand-header {
-    display: flex;
-    align-items: center;
-    gap: 11px;
-    margin: 4px 0 22px;
+  .ascii-logo {
+    font-family: monospace;
+    font-size: 6px;
+    line-height: 1.1;
+    color: #fff;
+    text-shadow: 0 0 8px rgba(255,255,255,0.6), 0 0 16px rgba(255,255,255,0.3);
+    white-space: pre;
+    overflow-x: auto;
+    margin: 4px 0 18px;
+    text-align: center;
   }
-  .brand-shield {
-    width: 36px; height: 36px;
-    border-radius: 9px;
-    background: linear-gradient(135deg, #1a1a1a, #000);
-    border: 1.5px solid #d4a017;
-    display: flex; align-items: center; justify-content: center;
-    font-weight: 900; font-size: 18px;
-    color: #d4a017;
-    box-shadow: 0 0 16px rgba(212,160,23,0.25);
-  }
-  .brand-title { font-size: 20px; font-weight: 800; letter-spacing: 0.6px; }
-  .brand-title .gold { color: #d4a017; }
-  .brand-title .silver { color: #c7c7cc; }
   .tabs {
     display: flex;
     gap: 6px;
@@ -178,15 +170,17 @@
   .empty-state { text-align: center; padding: 70px 24px; animation: fadeIn 0.3s ease; }
   .empty-state .icon { font-size: 40px; margin-bottom: 12px; opacity: 0.5; }
   .empty-state .msg { color: var(--hint); font-size: 14px; line-height: 1.5; }
-  .subtitle { font-size: 12px; color: var(--hint); margin: -16px 0 18px 47px; letter-spacing: 0.3px; }
+
 </style>
 </head>
 <body>
-  <div class="brand-header">
-    <div class="brand-shield">B</div>
-    <div class="brand-title"><span class="gold">BLUNT</span> <span class="silver">ESCROW</span></div>
-  </div>
-  <div class="subtitle">P2P Escrow Marketplace</div>
+  <pre class="ascii-logo">__________.____ ____ _____________________ ___________ ____________________________ ________ __ __
+\______   \|    |    \    \____   \_   _____// _____/\_   ___ \______   \\____   \\   \  /   \
+ |    |  _/|    |    /     |    |  \______  \/  \  ___/    \  \/|     ___/|    |  \\   \/  /\
+ |    |   \|    |    /      |   |   \/     \\    \_\  \    |    |   /|    |   |    \\      /
+ |______  /|_______  /\______  /_______  /_______  /\______  /|_______  /_______  /_______  /\__/\
+        \/         \/        \/        \/        \/        \/         \/        \/        \/        \/
+</pre>
   <div class="tabs">
     <div class="tab active" data-tab="market">Market</div>
     <div class="tab" data-tab="claimed">Claimed</div>
